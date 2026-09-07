@@ -2611,31 +2611,57 @@ function openBaleAgenda(){
 }
 // botão "+ Evento de dança": abre a agenda do iPhone/Mac para criar o evento lá
 function novoEventoIphone(){
-  // gera um evento em branco (.ics) que abre no Calendário do iPhone/Mac
+  // abre um menuzinho com as opções de onde criar o evento
+  closeCalMenu();
+  const btn=document.querySelector('#actionsAgenda button');
+  const menu=document.createElement('div');
+  menu.className='cal-menu';
+  menu.id='calMenu';
+  menu.innerHTML=`
+    <button onclick="novoNoGoogle();closeCalMenu()">📅 Criar no Google Agenda</button>
+    <button onclick="novoNaApple();closeCalMenu()">🍎 Criar no Calendário (iPhone/Mac)</button>`;
+  document.body.appendChild(menu);
+  const r=btn.getBoundingClientRect();
+  const menuW=250;
+  let left=r.right+window.scrollX-menuW;
+  menu.style.top=(r.bottom+window.scrollY+6)+'px';
+  menu.style.left=Math.max(10,left)+'px';
+  setTimeout(()=>document.addEventListener('click',closeCalMenu,{once:true}),0);
+}
+// data/hora padrão para um evento novo (hoje, próxima hora cheia)
+function novoEventoDT(){
   const now=new Date();
   const pad=(n)=>String(n).padStart(2,'0');
   const h=Math.min(22,now.getHours()+1);
-  const dt=now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+'T'+pad(h)+'0000';
-  const dtEnd=now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+'T'+pad(h+1)+'0000';
+  const d=now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate());
+  return {start:d+'T'+pad(h)+'0000', end:d+'T'+pad(h+1)+'0000'};
+}
+// abre o Google Agenda direto (sem baixar arquivo)
+function novoNoGoogle(){
+  const {start,end}=novoEventoDT();
+  const url='https://calendar.google.com/calendar/render?action=TEMPLATE'
+    +'&text='+encodeURIComponent('Evento de dança 🩰')
+    +'&dates='+start+'/'+end
+    +'&details='+encodeURIComponent('Ajuste a data, hora e o nome do evento.');
+  window.open(url,'_blank');
+  toast("Ajuste no Google Agenda e salve 🩰");
+}
+// abre o Calendário da Apple — no iPhone a URL data: abre o app direto
+function novoNaApple(){
+  const {start,end}=novoEventoDT();
   const stamp=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
   const ics=[
     'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Ana Clara Danca//PT-BR','METHOD:PUBLISH',
-    'BEGIN:VEVENT',
-    'UID:novo-'+Date.now()+'@anaclara',
-    'DTSTAMP:'+stamp,
-    'DTSTART:'+dt,
-    'DTEND:'+dtEnd,
-    'SUMMARY:Novo evento de dança 🩰',
+    'BEGIN:VEVENT','UID:novo-'+Date.now()+'@anaclara','DTSTAMP:'+stamp,
+    'DTSTART:'+start,'DTEND:'+end,
+    'SUMMARY:Evento de dança 🩰',
     'DESCRIPTION:Ajuste a data\\, hora e o nome\\, e salve no calendário do Balé.',
     'END:VEVENT','END:VCALENDAR'
   ].join('\r\n');
-  const blob=new Blob([ics],{type:'text/calendar'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='novo-evento-danca.ics';
-  a.click();
-  const conectada=!!localStorage.getItem(CAL_URL_KEY);
-  toast(conectada?"Ajuste no Calendário e salve no Balé 🩰":"Ajuste e salve. Lembre de conectar a agenda no menu ⋯");
+  // abre via data: URL — no iPhone/Mac isso abre o Calendário direto
+  const dataUrl='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);
+  window.location.href=dataUrl;
+  toast("Abrindo o Calendário... ajuste e salve no Balé 🩰");
 }
 // lê o calendário público via função do Vercel (contorna o CORS)
 async function loadBaleCalendar(){
