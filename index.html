@@ -102,6 +102,9 @@
   }
 
   /* ---------- CALENDÁRIO ---------- */
+  .cal-connected-info{font-family:var(--sans);font-size:12px;color:var(--soft);display:flex;align-items:center;gap:8px;padding:8px 12px 4px}
+  .cal-disconnect-btn{color:#c0563a!important}
+  .cal-disconnect-btn:hover{background:rgba(192,86,58,.08)!important;color:#c0563a!important}
   /* lembretes no formulário de evento */
   .reminder-pick{display:flex;flex-direction:column;gap:10px;margin-top:4px}
   .rem-opt{display:flex;align-items:center;gap:10px;font-family:var(--sans);font-size:14px;color:var(--ink);cursor:pointer}
@@ -731,7 +734,7 @@
         <button onclick="exportBackup();closeMenu()">↓ Fazer backup agora</button>
         <button onclick="document.getElementById('importInput').click();closeMenu()">↑ Restaurar backup</button>
         <div class="menu-label">Agenda do balé (iPhone)</div>
-        <button onclick="openCalConfig();closeMenu()">🔗 Conectar calendário do balé</button>
+        <div class="cal-menu-row" id="calMenuRow"></div>
       </div>
     </div>
     <span class="counter" id="counter"></span>
@@ -831,7 +834,6 @@
   </div>
   <div id="sectionAgenda" style="display:none">
     <div class="section-head"><span class="num">03</span><h2>Agenda</h2><span class="line"></span></div>
-    <div class="bale-bar" id="baleBar"></div>
     <div class="calendar" id="calendar"></div>
     <div id="agendaList"></div>
   </div>
@@ -2729,12 +2731,9 @@ async function loadBaleCalendar(){
     const texto=await resp.text();
     baleEvents=parseICS(texto);
     renderAgenda();
+    renderCalMenuRow();
   }catch(e){
     // se a função não estiver disponível (ex: testando local), não quebra
-    const bar=document.getElementById('baleBar');
-    if(bar && localStorage.getItem(CAL_URL_KEY)){
-      renderBaleBar('erro');
-    }
   }
 }
 // interpreta o texto do calendário (.ics) e extrai os eventos
@@ -2764,35 +2763,22 @@ function parseICS(txt){
 }
 function unescapeICS(s){ return (s||'').replace(/\\n/g,' ').replace(/\\,/g,',').replace(/\\;/g,';').replace(/\\\\/g,'\\'); }
 
-function renderBaleBar(state){
-  const bar=document.getElementById('baleBar');
-  if(!bar) return;
+function renderCalMenuRow(){
+  const row=document.getElementById('calMenuRow');
+  if(!row) return;
   const connected=!!localStorage.getItem(CAL_URL_KEY);
   if(!connected){
-    bar.innerHTML=`
-      <div class="bale-connect">
-        <div class="bale-txt"><b>🩰 Agenda do balé</b><span>Conecte o calendário do iPhone dela e veja os ensaios e apresentações aqui.</span></div>
-        <button class="bale-btn primary" onclick="openCalConfig()">Conectar calendário</button>
-      </div>`;
-  } else if(state==='erro'){
-    bar.innerHTML=`
-      <div class="bale-connect">
-        <div class="bale-txt"><b>🩰 Agenda do balé</b><span>Conectada, mas não consegui ler agora. No site publicado (Vercel) funciona; em teste local pode não carregar.</span></div>
-        <button class="bale-btn" onclick="openBaleAgenda()">Abrir agenda</button>
-      </div>`;
+    row.innerHTML=`<button onclick="openCalConfig();closeMenu()">🔗 Conectar calendário do balé</button>`;
   } else {
     const n=baleEvents.length;
-    bar.innerHTML=`
-      <div class="bale-connected">
-        <span class="bale-dot"></span>
-        <div class="bale-txt"><b>🩰 Agenda do balé conectada</b><span>${n} ${n===1?'evento':'eventos'} do iPhone aparecendo aqui.</span></div>
-        <button class="bale-btn" onclick="openBaleAgenda()">＋ Abrir no iPhone</button>
-      </div>`;
+    row.innerHTML=`
+      <div class="cal-connected-info"><span class="bale-dot"></span> Conectada · ${n} ${n===1?'evento':'eventos'}</div>
+      <button onclick="openCalConfig();closeMenu()">⚙ Ver / trocar link</button>
+      <button class="cal-disconnect-btn" onclick="disconnectCal();closeMenu()">✕ Desconectar calendário</button>`;
   }
 }
 
 function renderAgenda(){
-  renderBaleBar(baleEvents.length?'ok':(localStorage.getItem(CAL_URL_KEY)?'ok':'none'));
   renderCalendar();
   const box=document.getElementById('agendaList');
   // combina os eventos manuais com os do calendário do balé (iPhone)
@@ -2851,7 +2837,7 @@ function toggleMenu(e){
   if(e) e.stopPropagation();
   const m=document.getElementById('menu'), b=document.getElementById('menuBtn');
   const open=m.classList.toggle('open'); b.classList.toggle('open',open);
-  if(open){ updateStorageMeter(); updateAutoBackupUI(); }
+  if(open){ updateStorageMeter(); updateAutoBackupUI(); renderCalMenuRow(); }
 }
 function closeMenu(){
   document.getElementById('menu').classList.remove('open');
