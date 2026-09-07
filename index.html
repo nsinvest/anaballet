@@ -102,6 +102,24 @@
   }
 
   /* ---------- CALENDÁRIO ---------- */
+  /* lembretes no formulário de evento */
+  .reminder-pick{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+  .rem-opt{display:flex;align-items:center;gap:10px;font-family:var(--sans);font-size:14px;color:var(--ink);cursor:pointer}
+  .rem-opt input{width:18px;height:18px;accent-color:var(--gold);cursor:pointer}
+  .modal-google{width:100%;margin-top:12px;background:var(--paper);border:1px solid var(--line-strong);
+    color:var(--soft);font-family:var(--sans);font-size:13px;cursor:pointer;padding:11px;border-radius:8px;transition:all .15s ease}
+  .modal-google:hover{border-color:var(--gold);color:var(--gold)}
+  /* aviso de lembrete dentro da plataforma */
+  .inapp-reminder{position:fixed;bottom:24px;left:50%;transform:translate(-50%,100px);
+    background:var(--ink);color:var(--paper);padding:14px 18px;border-radius:100px;
+    display:flex;align-items:center;gap:12px;z-index:300;box-shadow:0 20px 50px -15px rgba(0,0,0,.5);
+    max-width:90vw;transition:transform .4s cubic-bezier(.2,.9,.2,1)}
+  .inapp-reminder.show{transform:translate(-50%,0)}
+  .iar-ico{font-size:20px}
+  .iar-txt{font-family:var(--sans);font-size:13.5px;line-height:1.3}
+  .iar-txt b{font-weight:600}
+  .iar-close{background:none;border:none;color:var(--paper);opacity:.6;cursor:pointer;font-size:16px;padding:0 4px}
+  .iar-close:hover{opacity:1}
   /* barra da agenda do balé (iPhone) */
   .bale-bar{margin-bottom:24px}
   .bale-connect,.bale-connected{display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:12px;flex-wrap:wrap}
@@ -689,7 +707,7 @@
       <button class="btn primary" onclick="openDiary()">＋ Nota do diário</button>
     </div>
     <div class="tab-actions" id="actionsAgenda" style="display:none">
-      <button class="btn primary" onclick="novoEventoIphone()">＋ Evento de dança</button>
+      <button class="btn primary" onclick="openEvent()">＋ Evento de dança</button>
     </div>
     <div class="tab-actions" id="actionsSonhos" style="display:none">
       <button class="btn primary" onclick="openSonho()">✦ Adicionar sonho</button>
@@ -1000,15 +1018,22 @@
     <label>Data</label>
     <input type="date" id="eDate">
     <label>Horário (opcional)</label>
-    <input type="text" id="eTime" placeholder="Ex.: 14h30">
+    <input type="time" id="eTime">
     <label>Local (opcional)</label>
     <input type="text" id="ePlace" placeholder="Ex.: Estúdio, Teatro Municipal...">
     <label>Observações (opcional)</label>
     <textarea id="eNote" placeholder="Levar sapatilha, figurino, chegar 30 min antes..."></textarea>
+    <label>Avisar antes (lembrete)</label>
+    <div class="reminder-pick">
+      <label class="rem-opt"><input type="checkbox" id="eRem30"> 30 minutos antes</label>
+      <label class="rem-opt"><input type="checkbox" id="eRem60"> 1 hora antes</label>
+      <label class="rem-opt"><input type="checkbox" id="eRem1440"> 1 dia antes</label>
+    </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeEvent()">Cancelar</button>
       <button class="btn primary" onclick="saveEvent()">Salvar compromisso</button>
     </div>
+    <button class="modal-google" onclick="addSavedToGoogle()">📅 Também adicionar ao Google Agenda</button>
   </div>
 </div>
 
@@ -2395,21 +2420,34 @@ function openEvent(){
   editingEventId=null;
   document.getElementById('eventModalTitle').textContent="Novo compromisso";
   ['eTitle','eTime','ePlace','eNote'].forEach(id=>document.getElementById(id).value="");
+  document.getElementById('eRem30').checked=false;
+  document.getElementById('eRem60').checked=true; // 1h antes marcado por padrão
+  document.getElementById('eRem1440').checked=false;
   document.getElementById('eDate').value=new Date().toISOString().slice(0,10);
   document.getElementById('eventOverlay').classList.add('open');
 }
 function closeEvent(){ document.getElementById('eventOverlay').classList.remove('open'); }
+function getReminders(){
+  const r=[];
+  if(document.getElementById('eRem30').checked) r.push(30);
+  if(document.getElementById('eRem60').checked) r.push(60);
+  if(document.getElementById('eRem1440').checked) r.push(1440);
+  return r;
+}
 function saveEvent(){
   const title=document.getElementById('eTitle').value.trim();
   const date=document.getElementById('eDate').value;
   if(!title){ toast("Dê um nome ao compromisso."); return; }
   if(!date){ toast("Escolha uma data."); return; }
+  const reminders=getReminders();
   if(editingEventId){
     const ev=events.find(x=>x.id===editingEventId);
     ev.title=title; ev.date=date;
     ev.time=document.getElementById('eTime').value.trim();
     ev.place=document.getElementById('ePlace').value.trim();
     ev.note=document.getElementById('eNote').value.trim();
+    ev.reminders=reminders;
+    ev.notified={}; // reseta os avisos já enviados
   }else{
     events.push({
       id:Date.now()+"-"+Math.random().toString(36).slice(2,7),
@@ -2417,10 +2455,14 @@ function saveEvent(){
       time:document.getElementById('eTime').value.trim(),
       place:document.getElementById('ePlace').value.trim(),
       note:document.getElementById('eNote').value.trim(),
+      reminders, notified:{},
       done:false
     });
   }
   saveMeta(); renderAgenda(); updateCounter('agenda'); closeEvent();
+  scheduleReminderCheck();
+  // se ela marcou lembrete, pede permissão de notificação
+  if(reminders.length) requestNotifPermission();
   toast(editingEventId?"Compromisso atualizado 🤍":"Compromisso guardado 🤍");
 }
 function editEvent(id){
@@ -2432,7 +2474,21 @@ function editEvent(id){
   document.getElementById('eTime').value=ev.time||"";
   document.getElementById('ePlace').value=ev.place||"";
   document.getElementById('eNote').value=ev.note||"";
+  const rem=ev.reminders||[];
+  document.getElementById('eRem30').checked=rem.includes(30);
+  document.getElementById('eRem60').checked=rem.includes(60);
+  document.getElementById('eRem1440').checked=rem.includes(1440);
   document.getElementById('eventOverlay').classList.add('open');
+}
+// adiciona o compromisso que está no formulário ao Google Agenda
+function addSavedToGoogle(){
+  const title=document.getElementById('eTitle').value.trim();
+  const date=document.getElementById('eDate').value;
+  if(!title||!date){ toast("Preencha o nome e a data primeiro."); return; }
+  const time=document.getElementById('eTime').value.trim();
+  const place=document.getElementById('ePlace').value.trim();
+  const note=document.getElementById('eNote').value.trim();
+  addToGoogle({title, date, time, place, note});
 }
 function deleteEvent(id){
   if(!confirm("Remover este compromisso?")) return;
@@ -2855,6 +2911,86 @@ function toast(msg){
   toastTimer=setTimeout(()=>t.classList.remove('show'),3200);
 }
 
+/* ---------- NOTIFICAÇÕES / LEMBRETES ---------- */
+function requestNotifPermission(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission==='default'){
+    Notification.requestPermission();
+  }
+}
+// converte a data + hora de um evento em um objeto Date
+function eventDate(ev){
+  let h=9,min=0;
+  if(ev.time){
+    const t=ev.time.replace('h',':').replace(/[^\d:]/g,'');
+    const parts=t.split(':');
+    if(parts[0]) h=parseInt(parts[0],10)||9;
+    if(parts[1]!==undefined && parts[1]!=='') min=parseInt(parts[1],10)||0;
+  }
+  const [y,mo,d]=ev.date.split('-').map(Number);
+  return new Date(y,mo-1,d,h,min);
+}
+// verifica se algum lembrete precisa disparar agora
+let reminderTimer=null;
+function scheduleReminderCheck(){
+  if(reminderTimer) return; // já está rodando
+  reminderTimer=setInterval(checkReminders, 30000); // checa a cada 30 segundos
+  checkReminders();
+}
+function checkReminders(){
+  const agora=Date.now();
+  let mudou=false;
+  for(const ev of events){
+    if(ev.done || !ev.reminders || !ev.reminders.length) continue;
+    const quando=eventDate(ev).getTime();
+    if(!ev.notified) ev.notified={};
+    for(const mins of ev.reminders){
+      const key=String(mins);
+      if(ev.notified[key]) continue; // já avisou esse
+      const alvo=quando - mins*60000; // momento de avisar
+      // dispara se passou do momento de avisar mas o evento ainda não aconteceu
+      if(agora>=alvo && agora<quando+60000){
+        dispararLembrete(ev, mins);
+        ev.notified[key]=true;
+        mudou=true;
+      }
+    }
+  }
+  if(mudou) saveMeta();
+}
+function textoAntecedencia(mins){
+  if(mins===30) return "em 30 minutos";
+  if(mins===60) return "em 1 hora";
+  if(mins===1440) return "amanhã";
+  return "em breve";
+}
+function dispararLembrete(ev, mins){
+  const quando=textoAntecedencia(mins);
+  const corpo=`${ev.title} ${quando}${ev.time?' ('+ev.time+')':''}${ev.place?' · '+ev.place:''}`;
+  // 1) notificação do sistema (se autorizada)
+  if('Notification' in window && Notification.permission==='granted'){
+    try{
+      new Notification('🩰 Lembrete de dança', {body:corpo, tag:ev.id+'-'+mins});
+    }catch(e){}
+  }
+  // 2) aviso dentro da plataforma (sempre)
+  showInAppReminder(ev, quando);
+}
+function showInAppReminder(ev, quando){
+  let bar=document.getElementById('inAppReminder');
+  if(!bar){
+    bar=document.createElement('div');
+    bar.id='inAppReminder';
+    bar.className='inapp-reminder';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML=`
+    <span class="iar-ico">🩰</span>
+    <div class="iar-txt"><b>${escapeHtml(ev.title)}</b> ${quando}${ev.time?' · '+escapeHtml(ev.time):''}${ev.place?' · '+escapeHtml(ev.place):''}</div>
+    <button class="iar-close" onclick="document.getElementById('inAppReminder').remove()">✕</button>`;
+  bar.classList.add('show');
+}
+
 /* ---------- init ---------- */
 (async function(){
   // 1. carrega os TEXTOS das trajetórias primeiro (localStorage, sempre funciona)
@@ -2876,6 +3012,8 @@ function toast(msg){
   showRestoreBannerIfNeeded();
   // carrega o calendário do balé (iPhone) se estiver conectado
   try{ if(localStorage.getItem(CAL_URL_KEY)) loadBaleCalendar(); }catch(e){}
+  // inicia o sistema de lembretes
+  try{ scheduleReminderCheck(); }catch(e){}
 })();
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
