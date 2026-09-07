@@ -198,6 +198,78 @@
     #sectionInicio{padding-top:0}
   }
 
+  /* ---------- TOOLBAR TRAJETÓRIA (lista/linha do tempo) ---------- */
+  .modal-delete{width:100%;margin-top:12px;background:none;border:none;color:#c0563a;font-family:var(--sans);
+    font-size:13px;cursor:pointer;padding:8px;opacity:.8}
+  .modal-delete:hover{opacity:1;text-decoration:underline}  .traj-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+  .view-toggle{display:inline-flex;border:1px solid var(--line-strong);border-radius:100px;padding:3px;background:var(--paper-2)}
+  .view-btn{font-family:var(--sans);font-size:13px;font-weight:500;border:none;background:none;color:var(--soft);
+    padding:8px 18px;border-radius:100px;cursor:pointer;transition:all .2s ease}
+  .view-btn.active{background:var(--ink);color:var(--paper)}
+  .btn-marco{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+    border:1px solid var(--gold-soft);background:var(--gold-wash);color:var(--gold);padding:10px 18px;
+    border-radius:100px;cursor:pointer;transition:all .15s ease}
+  .btn-marco:hover{background:var(--gold);color:var(--paper);border-color:var(--gold)}
+
+  /* ---------- LINHA DO TEMPO ---------- */
+  .timeline-view{position:relative;padding:20px 0 20px 0}
+  .timeline-view::before{content:"";position:absolute;left:26px;top:0;bottom:0;width:2px;
+    background:linear-gradient(var(--gold-soft),var(--gold-wash))}
+  .tl-item{position:relative;padding:0 0 40px 70px;cursor:pointer}
+  .tl-item:last-child{padding-bottom:8px}
+  .tl-dot{position:absolute;left:16px;top:2px;width:22px;height:22px;border-radius:50%;
+    background:var(--paper);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;
+    font-size:11px;z-index:2}
+  .tl-item.is-marco .tl-dot{background:var(--gold);border-color:var(--gold);color:#fff}
+  .tl-date{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:5px}
+  .tl-title{font-family:var(--serif);font-size:22px;color:var(--ink);line-height:1.15;margin-bottom:4px}
+  .tl-meta{font-family:var(--sans);font-size:13px;color:var(--soft);line-height:1.5}
+  .tl-badges{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+  .tl-mini{font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+    padding:4px 10px;border-radius:100px;background:var(--paper-2);border:1px solid var(--line);color:var(--soft)}
+  .tl-mini.podium{background:linear-gradient(100deg,var(--gold),var(--gold-soft));color:#fff;border-color:transparent}
+  .tl-marco-tag{display:inline-block;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--gold);margin-bottom:4px}
+  .tl-empty{padding:40px 20px;text-align:center;font-family:var(--serif);font-style:italic;color:var(--faint);font-size:17px}
+  @media (max-width:820px){
+    .tl-item{padding-left:56px}
+    .timeline-view::before{left:19px}
+    .tl-dot{left:9px}
+    .tl-title{font-size:19px}
+  }
+
+  /* seletor de ícone do marco */
+  .icon-pick{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .icon-opt{width:44px;height:44px;border-radius:10px;border:1px solid var(--line-strong);background:var(--paper);
+    font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s ease}
+  .icon-opt:hover{border-color:var(--gold)}
+  .icon-opt.sel{border-color:var(--gold);background:var(--gold-wash)}
+
+  /* ---------- SONHOS ---------- */
+  .sonhos-intro{font-family:var(--serif);font-style:italic;font-size:18px;color:var(--soft);
+    max-width:60ch;margin-bottom:32px;line-height:1.6}
+  .sonhos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+  .sonho-card{border:1px solid var(--line-strong);border-radius:12px;padding:22px;background:var(--paper-2);
+    position:relative;transition:all .18s ease;display:flex;flex-direction:column;gap:10px}
+  .sonho-card.done{background:linear-gradient(150deg,var(--gold-wash),var(--paper-2));border-color:var(--gold-soft)}
+  .sonho-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .sonho-who{font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--gold);padding:4px 10px;background:var(--gold-wash);border-radius:100px;white-space:nowrap}
+  .sonho-who.pai{color:var(--soft);background:var(--paper);border:1px solid var(--line)}
+  .sonho-title{font-family:var(--serif);font-size:20px;color:var(--ink);line-height:1.25}
+  .sonho-card.done .sonho-title{text-decoration:line-through;text-decoration-color:var(--gold-soft);color:var(--soft)}
+  .sonho-desc{font-family:var(--sans);font-size:13.5px;color:var(--soft);line-height:1.55}
+  .sonho-actions{display:flex;gap:8px;margin-top:6px;padding-top:12px;border-top:1px solid var(--line)}
+  .sonho-btn{font-family:var(--sans);font-size:12px;background:none;border:none;cursor:pointer;color:var(--faint);
+    padding:4px 0;transition:color .15s ease}
+  .sonho-btn:hover{color:var(--gold)}
+  .sonho-btn.check{color:var(--gold);font-weight:600;margin-right:auto}
+  .sonho-done-tag{font-family:var(--sans);font-size:11px;font-weight:600;color:var(--gold);
+    display:flex;align-items:center;gap:5px}
+  .sonhos-empty{grid-column:1/-1;padding:50px 20px;text-align:center;font-family:var(--serif);font-style:italic;
+    color:var(--faint);font-size:18px}
+
   /* ---------- PERFIL ---------- */
   .perfil-grid{display:grid;grid-template-columns:0.85fr 1.15fr;gap:56px;align-items:start}
   .perfil-photo{position:relative}
@@ -579,6 +651,7 @@
       <button class="tab" data-tab="trajetoria" onclick="switchTab('trajetoria')">Trajetória</button>
       <button class="tab" data-tab="diario" onclick="switchTab('diario')">Diário</button>
       <button class="tab" data-tab="agenda" onclick="switchTab('agenda')">Agenda</button>
+      <button class="tab" data-tab="sonhos" onclick="switchTab('sonhos')">Sonhos</button>
       <button class="tab" data-tab="perfil" onclick="switchTab('perfil')">Perfil</button>
     </nav>
     <div class="tab-actions" id="actionsTrajetoria">
@@ -589,6 +662,9 @@
     </div>
     <div class="tab-actions" id="actionsAgenda" style="display:none">
       <button class="btn primary" onclick="openEvent()">＋ Evento de dança</button>
+    </div>
+    <div class="tab-actions" id="actionsSonhos" style="display:none">
+      <button class="btn primary" onclick="openSonho()">✦ Adicionar sonho</button>
     </div>
     <div class="menu-wrap">
       <button class="icon-btn" id="menuBtn" onclick="toggleMenu(event)" aria-label="Mais opções" title="Backup e restauração">
@@ -668,6 +744,13 @@
   </div>
   <div id="sectionTrajetoria" style="display:none">
     <div class="section-head"><span class="num">01</span><h2>Trajetória</h2><span class="line"></span></div>
+    <div class="traj-toolbar">
+      <div class="view-toggle">
+        <button class="view-btn active" id="viewLista" onclick="setTrajView('lista')">☰ Lista</button>
+        <button class="view-btn" id="viewLinha" onclick="setTrajView('linha')">◈ Linha do tempo</button>
+      </div>
+      <button class="btn-marco" onclick="openMarco()">✦ Adicionar marco especial</button>
+    </div>
     <div class="filters" id="filters">
       <div class="filter-group">
         <label class="filter-label">Evento</label>
@@ -692,6 +775,7 @@
       <button class="filter-clear" id="filterClear" onclick="clearFilters()" style="display:none">✕ Limpar filtros</button>
     </div>
     <div class="thread" id="timeline"></div>
+    <div class="timeline-view" id="timelineView" style="display:none"></div>
   </div>
   <div id="sectionDiario" style="display:none">
     <div class="section-head"><span class="num">02</span><h2>Diário</h2><span class="line"></span></div>
@@ -742,6 +826,11 @@
         </div>
       </div>
     </div>
+  </div>
+  <div id="sectionSonhos" style="display:none">
+    <div class="section-head"><span class="num">05</span><h2>Sonhos</h2><span class="line"></span></div>
+    <p class="sonhos-intro">Os sonhos dela na dança — e os que a família sonha junto. Cada um pode ser marcado como conquistado quando o dia chegar. 🌟</p>
+    <div class="sonhos-grid" id="sonhosGrid"></div>
   </div>
 </main>
 
@@ -892,6 +981,46 @@
   </div>
 </div>
 
+<div class="overlay" id="marcoOverlay">
+  <div class="modal">
+    <h3 id="marcoModalTitle">Marco especial</h3>
+    <p class="hint">Aqueles momentos que marcaram a jornada: a primeira aula, a primeira sapatilha de ponta, a estreia num palco grande...</p>
+    <label>O que aconteceu?</label>
+    <input type="text" id="mkTitle" placeholder="Ex.: Primeira sapatilha de ponta">
+    <label>Quando? (data)</label>
+    <input type="date" id="mkDate">
+    <label>Um pouco sobre esse momento (opcional)</label>
+    <textarea id="mkDesc" placeholder="Por que esse momento foi tão especial?"></textarea>
+    <label>Ícone</label>
+    <div class="icon-pick" id="mkIconPick"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeMarco()">Cancelar</button>
+      <button class="btn primary" onclick="saveMarco()">Salvar marco</button>
+    </div>
+    <button class="modal-delete" id="marcoDelete" onclick="deleteMarco()" style="display:none">Remover este marco</button>
+  </div>
+</div>
+
+<div class="overlay" id="sonhoOverlay">
+  <div class="modal">
+    <h3 id="sonhoModalTitle">Um sonho</h3>
+    <p class="hint">Onde ela quer chegar, o que sonha dançar, os palcos que quer pisar. Sonhos grandes e pequenos, todos valem.</p>
+    <label>Qual é o sonho?</label>
+    <input type="text" id="snTitle" placeholder="Ex.: Dançar O Quebra-Nozes num grande teatro">
+    <label>Quem está sonhando?</label>
+    <select id="snWho">
+      <option value="ela">Ana Clara</option>
+      <option value="pai">Papai/Mamãe</option>
+    </select>
+    <label>Um pouco mais sobre esse sonho (opcional)</label>
+    <textarea id="snDesc" placeholder="Conte mais sobre esse sonho..."></textarea>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeSonho()">Cancelar</button>
+      <button class="btn primary" onclick="saveSonho()">Guardar sonho</button>
+    </div>
+  </div>
+</div>
+
 <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
   <button class="close" onclick="closeLightbox(event)">✕</button>
   <div id="lightboxContent"></div>
@@ -911,6 +1040,12 @@ let entries = [];
 let diary = [];
 let events = [];
 let profile = {};
+let marcos = [];        // marcos especiais da linha do tempo
+let sonhos = [];        // quadro de sonhos
+let trajView = 'lista'; // 'lista' ou 'linha'
+let editingMarcoId = null;
+let editingSonhoId = null;
+let mkIcon = '✦';       // ícone selecionado do marco
 let staged = [];        // {type, mediaId?, blob?, id?}
 let editingId = null;
 let editingDiaryId = null;
@@ -1027,12 +1162,14 @@ function loadMeta(){
       diary=data.diary||[];
       events=data.events||[];
       profile=data.profile||{};
+      marcos=data.marcos||[];
+      sonhos=data.sonhos||[];
       if(data.intro) document.getElementById('introText').textContent=data.intro;
     }
   }catch(e){ entries=[]; }
 }
 function saveMeta(){
-  const data={ intro:document.getElementById('introText').textContent, entries, diary, events, profile };
+  const data={ intro:document.getElementById('introText').textContent, entries, diary, events, profile, marcos, sonhos };
   localStorage.setItem(META_KEY, JSON.stringify(data));
   scheduleAutoBackup();
 }
@@ -1526,7 +1663,7 @@ async function buildBackupData(){
       }
     }
   }
-  return { intro:document.getElementById('introText').textContent, entries, diary, events, profile, media };
+  return { intro:document.getElementById('introText').textContent, entries, diary, events, profile, marcos, sonhos, media };
 }
 async function exportBackup(){
   toast("Preparando backup...");
@@ -1714,6 +1851,8 @@ async function applyBackupData(data){
   diary=data.diary||[];
   events=data.events||[];
   profile=data.profile||{};
+  marcos=data.marcos||[];
+  sonhos=data.sonhos||[];
   if(data.intro) document.getElementById('introText').textContent=data.intro;
   // regrava mídias
   if(data.media){
@@ -1745,7 +1884,7 @@ async function importBackup(ev){
 
 /* ---------- abas ---------- */
 function switchTab(tab){
-  ['inicio','trajetoria','diario','agenda','perfil'].forEach(t=>{
+  ['inicio','trajetoria','diario','agenda','sonhos','perfil'].forEach(t=>{
     const sec=document.getElementById('section'+cap(t));
     if(sec) sec.style.display = t===tab?'block':'none';
     const act=document.getElementById('actions'+cap(t));
@@ -1756,6 +1895,7 @@ function switchTab(tab){
   if(tab==='inicio') renderDashboard();
   if(tab==='diario') renderDiary();
   if(tab==='agenda') renderAgenda();
+  if(tab==='sonhos') renderSonhos();
   if(tab==='perfil') renderProfile();
   updateCounter(tab);
   window.scrollTo({top:0,behavior:'smooth'});
@@ -1766,6 +1906,7 @@ function updateCounter(tab){
   if(tab==='trajetoria') c.textContent = entries.length?`${entries.length} ${entries.length===1?'momento':'momentos'}`:"";
   else if(tab==='diario') c.textContent = diary.length?`${diary.length} ${diary.length===1?'página':'páginas'}`:"";
   else if(tab==='agenda') c.textContent = events.length?`${events.length} ${events.length===1?'compromisso':'compromissos'}`:"";
+  else if(tab==='sonhos') c.textContent = sonhos.length?`${sonhos.length} ${sonhos.length===1?'sonho':'sonhos'}`:"";
   else c.textContent = "";
 }
 
@@ -1928,6 +2069,179 @@ async function renderDashboard(){
 }
 
 /* ---------- PERFIL ---------- */
+/* ---------- LINHA DO TEMPO ---------- */
+function setTrajView(v){
+  trajView=v;
+  document.getElementById('viewLista').classList.toggle('active', v==='lista');
+  document.getElementById('viewLinha').classList.toggle('active', v==='linha');
+  document.getElementById('timeline').style.display = v==='lista'?'block':'none';
+  document.getElementById('timelineView').style.display = v==='linha'?'block':'none';
+  document.getElementById('filters').style.display = v==='lista'?'':'none';
+  if(v==='linha') renderTimeline();
+}
+function renderTimeline(){
+  const box=document.getElementById('timelineView');
+  // junta momentos (entries) e marcos numa lista só, ordenada por data (mais recente no topo)
+  const items=[];
+  entries.forEach(e=>items.push({kind:'momento', date:e.date, data:e}));
+  marcos.forEach(m=>items.push({kind:'marco', date:m.date, data:m}));
+  items.sort((a,b)=>(a.date<b.date?1:(a.date>b.date?-1:0)));
+  if(!items.length){
+    box.innerHTML=`<div class="tl-empty">A linha do tempo vai se formando conforme os momentos e marcos são adicionados. ✦</div>`;
+    return;
+  }
+  box.innerHTML=items.map(it=>{
+    if(it.kind==='marco'){
+      const m=it.data;
+      return `<div class="tl-item is-marco" data-marco="${m.id}">
+        <div class="tl-dot">${m.icon||'✦'}</div>
+        <div class="tl-marco-tag">✦ Marco especial</div>
+        <div class="tl-date">${fmtDate(m.date)}</div>
+        <div class="tl-title">${escapeHtml(m.title)}</div>
+        ${m.desc?`<div class="tl-meta">${escapeHtml(m.desc)}</div>`:''}
+      </div>`;
+    } else {
+      const e=it.data;
+      let badges='';
+      if(e.placement){ const pod=(e.placement==='1º lugar'||e.placement==='2º lugar'||e.placement==='3º lugar'); badges+=`<span class="tl-mini ${pod?'podium':''}">${escapeHtml(e.placement)}</span>`; }
+      if(e.style) badges+=`<span class="tl-mini">${escapeHtml(e.style.trim())}</span>`;
+      if(e.kind){ const k=e.kind==='competitivo'?'Competitivo':e.kind==='avaliativo'?'Avaliativo':'Apresentação'; badges+=`<span class="tl-mini">${k}</span>`; }
+      return `<div class="tl-item" data-goto-momento="1">
+        <div class="tl-dot">🩰</div>
+        <div class="tl-date">${fmtDate(e.date)}</div>
+        <div class="tl-title">${escapeHtml(e.title||'Momento')}</div>
+        <div class="tl-meta">${[e.place,e.city].filter(Boolean).map(escapeHtml).join(' · ')||''}</div>
+        ${badges?`<div class="tl-badges">${badges}</div>`:''}
+      </div>`;
+    }
+  }).join("");
+  box.querySelectorAll('[data-marco]').forEach(el=>el.onclick=()=>editMarco(el.dataset.marco));
+  box.querySelectorAll('[data-goto-momento]').forEach(el=>el.onclick=()=>setTrajView('lista'));
+}
+
+/* ---------- MARCOS ---------- */
+const MARCO_ICONS=['✦','🩰','👟','🌟','🏆','💫','🎭','👑','❤️','🎀','🕊️','🌸'];
+function openMarco(){
+  editingMarcoId=null; mkIcon='✦';
+  document.getElementById('marcoModalTitle').textContent="Marco especial";
+  document.getElementById('mkTitle').value="";
+  document.getElementById('mkDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('mkDesc').value="";
+  renderIconPick();
+  document.getElementById('marcoDelete').style.display='none';
+  document.getElementById('marcoOverlay').classList.add('open');
+}
+function renderIconPick(){
+  const box=document.getElementById('mkIconPick');
+  box.innerHTML=MARCO_ICONS.map(ic=>`<button type="button" class="icon-opt ${ic===mkIcon?'sel':''}" onclick="pickIcon('${ic}')">${ic}</button>`).join("");
+}
+function pickIcon(ic){ mkIcon=ic; renderIconPick(); }
+function closeMarco(){ document.getElementById('marcoOverlay').classList.remove('open'); }
+function saveMarco(){
+  const title=document.getElementById('mkTitle').value.trim();
+  const date=document.getElementById('mkDate').value;
+  if(!title||!date){ toast("Preencha o que aconteceu e a data."); return; }
+  const desc=document.getElementById('mkDesc').value.trim();
+  if(editingMarcoId){
+    const m=marcos.find(x=>x.id===editingMarcoId);
+    if(m){ m.title=title; m.date=date; m.desc=desc; m.icon=mkIcon; }
+  } else {
+    marcos.push({id:'mk-'+Date.now(), title, date, desc, icon:mkIcon});
+  }
+  saveMeta(); closeMarco();
+  if(trajView==='linha') renderTimeline();
+  toast("Marco guardado ✦");
+}
+function editMarco(id){
+  const m=marcos.find(x=>x.id===id); if(!m) return;
+  editingMarcoId=id; mkIcon=m.icon||'✦';
+  document.getElementById('marcoModalTitle').textContent="Editar marco";
+  document.getElementById('mkTitle').value=m.title||"";
+  document.getElementById('mkDate').value=m.date||"";
+  document.getElementById('mkDesc').value=m.desc||"";
+  renderIconPick();
+  document.getElementById('marcoDelete').style.display='block';
+  document.getElementById('marcoOverlay').classList.add('open');
+}
+function deleteMarco(){
+  if(!editingMarcoId) return;
+  if(!confirm("Remover este marco?")) return;
+  marcos=marcos.filter(x=>x.id!==editingMarcoId);
+  saveMeta(); closeMarco();
+  if(trajView==='linha') renderTimeline();
+  toast("Marco removido");
+}
+
+/* ---------- SONHOS ---------- */
+function openSonho(){
+  editingSonhoId=null;
+  document.getElementById('sonhoModalTitle').textContent="Um sonho";
+  document.getElementById('snTitle').value="";
+  document.getElementById('snWho').value="ela";
+  document.getElementById('snDesc').value="";
+  document.getElementById('sonhoOverlay').classList.add('open');
+}
+function closeSonho(){ document.getElementById('sonhoOverlay').classList.remove('open'); }
+function saveSonho(){
+  const title=document.getElementById('snTitle').value.trim();
+  if(!title){ toast("Escreva qual é o sonho."); return; }
+  const who=document.getElementById('snWho').value;
+  const desc=document.getElementById('snDesc').value.trim();
+  if(editingSonhoId){
+    const s=sonhos.find(x=>x.id===editingSonhoId);
+    if(s){ s.title=title; s.who=who; s.desc=desc; }
+  } else {
+    sonhos.push({id:'sn-'+Date.now(), title, who, desc, done:false, dateAdded:new Date().toISOString().slice(0,10)});
+  }
+  saveMeta(); closeSonho(); renderSonhos();
+  toast("Sonho guardado 🌟");
+}
+function editSonho(id){
+  const s=sonhos.find(x=>x.id===id); if(!s) return;
+  editingSonhoId=id;
+  document.getElementById('sonhoModalTitle').textContent="Editar sonho";
+  document.getElementById('snTitle').value=s.title||"";
+  document.getElementById('snWho').value=s.who||"ela";
+  document.getElementById('snDesc').value=s.desc||"";
+  document.getElementById('sonhoOverlay').classList.add('open');
+}
+function toggleSonhoDone(id){
+  const s=sonhos.find(x=>x.id===id); if(!s) return;
+  s.done=!s.done;
+  if(s.done) s.dateDone=new Date().toISOString().slice(0,10);
+  saveMeta(); renderSonhos();
+  if(s.done) toast("Sonho realizado! 🎉");
+}
+function deleteSonho(id){
+  if(!confirm("Remover este sonho?")) return;
+  sonhos=sonhos.filter(x=>x.id!==id);
+  saveMeta(); renderSonhos();
+}
+function renderSonhos(){
+  const grid=document.getElementById('sonhosGrid');
+  if(!grid) return;
+  if(!sonhos.length){
+    grid.innerHTML=`<div class="sonhos-empty">Ainda não há sonhos guardados aqui.<br>Toque em "✦ Adicionar sonho" para começar. 🌟</div>`;
+    return;
+  }
+  // não realizados primeiro, depois realizados
+  const ordered=[...sonhos].sort((a,b)=>(a.done===b.done?0:(a.done?1:-1)));
+  grid.innerHTML=ordered.map(s=>`
+    <div class="sonho-card ${s.done?'done':''}">
+      <div class="sonho-top">
+        <span class="sonho-who ${s.who==='pai'?'pai':''}">${s.who==='pai'?'💛 Família':'Ana Clara'}</span>
+        ${s.done?'<span class="sonho-done-tag">✓ Realizado</span>':''}
+      </div>
+      <div class="sonho-title">${escapeHtml(s.title)}</div>
+      ${s.desc?`<div class="sonho-desc">${escapeHtml(s.desc)}</div>`:''}
+      <div class="sonho-actions">
+        <button class="sonho-btn check" onclick="toggleSonhoDone('${s.id}')">${s.done?'↩ Reabrir':'✓ Realizei!'}</button>
+        <button class="sonho-btn" onclick="editSonho('${s.id}')">Editar</button>
+        <button class="sonho-btn" onclick="deleteSonho('${s.id}')">Remover</button>
+      </div>
+    </div>`).join("");
+}
+
 function renderProfile(){
   const p = profile||{};
   ['idade','inicio','escola','estilo','sonhos','sobre'].forEach(f=>{
@@ -2263,7 +2577,7 @@ function toast(msg){
 })();
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    closeForm(); closeDiary(); closeEvent(); closeMenu();
+    closeForm(); closeDiary(); closeEvent(); closeMarco(); closeSonho(); closeMenu();
     document.getElementById('lightbox').classList.remove('open');
   }
 });
