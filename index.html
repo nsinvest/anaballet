@@ -102,6 +102,28 @@
   }
 
   /* ---------- CALENDÁRIO ---------- */
+  /* barra da agenda do balé (iPhone) */
+  .bale-bar{margin-bottom:24px}
+  .bale-connect,.bale-connected{display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:12px;flex-wrap:wrap}
+  .bale-connect{background:linear-gradient(120deg,var(--gold-wash),var(--paper-2));border:1px solid rgba(176,141,76,.3)}
+  .bale-connected{background:var(--paper-2);border:1px solid var(--line-strong)}
+  .bale-txt{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}
+  .bale-txt b{font-family:var(--serif);font-size:17px;color:var(--ink)}
+  .bale-txt span{font-family:var(--sans);font-size:12.5px;color:var(--soft);line-height:1.4}
+  .bale-btn{font-family:var(--sans);font-size:13px;font-weight:500;border:1px solid var(--line-strong);
+    background:var(--paper);color:var(--ink);border-radius:100px;padding:10px 18px;cursor:pointer;white-space:nowrap;transition:all .15s ease}
+  .bale-btn:hover{border-color:var(--gold);color:var(--gold)}
+  .bale-btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .bale-btn.primary:hover{background:var(--gold);border-color:var(--gold)}
+  .bale-dot{width:9px;height:9px;border-radius:50%;background:#4a9e6f;flex-shrink:0;box-shadow:0 0 0 3px rgba(74,158,111,.18)}
+  .event.from-bale{background:linear-gradient(100deg,var(--gold-wash),transparent)}
+  .e-bale-mark{width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;margin-top:4px}
+  .bale-tag{font-family:var(--sans);font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--gold);background:var(--gold-wash);padding:2px 8px;border-radius:100px;margin-left:8px;vertical-align:middle}
+  .cal-steps{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:4px 0 14px}
+  .cal-steps p{font-family:var(--sans);font-size:13px;color:var(--ink);margin:0 0 8px}
+  .cal-steps ol{margin:0;padding-left:20px;font-family:var(--sans);font-size:12.5px;color:var(--soft);line-height:1.7}
+  .cal-steps b{color:var(--ink)}
   .calendar{border:1px solid var(--line-strong);border-radius:10px;padding:22px;background:var(--paper-2);margin-bottom:40px}
   .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
   .cal-title{font-family:var(--serif);font-size:22px;color:var(--ink);text-transform:capitalize}
@@ -690,6 +712,8 @@
         <div class="menu-label">Backup manual</div>
         <button onclick="exportBackup();closeMenu()">↓ Fazer backup agora</button>
         <button onclick="document.getElementById('importInput').click();closeMenu()">↑ Restaurar backup</button>
+        <div class="menu-label">Agenda do balé (iPhone)</div>
+        <button onclick="openCalConfig();closeMenu()">🔗 Conectar calendário do balé</button>
       </div>
     </div>
     <span class="counter" id="counter"></span>
@@ -789,6 +813,7 @@
   </div>
   <div id="sectionAgenda" style="display:none">
     <div class="section-head"><span class="num">03</span><h2>Agenda</h2><span class="line"></span></div>
+    <div class="bale-bar" id="baleBar"></div>
     <div class="calendar" id="calendar"></div>
     <div id="agendaList"></div>
   </div>
@@ -1024,6 +1049,29 @@
       <button class="btn" onclick="closeSonho()">Cancelar</button>
       <button class="btn primary" onclick="saveSonho()">Guardar sonho</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="calConfigOverlay">
+  <div class="modal">
+    <h3>Agenda do balé (iPhone)</h3>
+    <p class="hint">Conecte o calendário do balé da Ana Clara. Ela cadastra os ensaios e apresentações no iPhone, e eles aparecem aqui automaticamente. 🩰</p>
+    <div class="cal-steps">
+      <p><b>Como pegar o link (no iPhone):</b></p>
+      <ol>
+        <li>No app <b>Calendário</b>, crie um calendário só do balé (ou use um existente)</li>
+        <li>Toque em <b>Calendários</b> embaixo → o <b>(i)</b> ao lado do calendário do balé</li>
+        <li>Ligue <b>"Calendário Público"</b> e toque em <b>"Compartilhar link"</b></li>
+        <li>Copie o link e cole abaixo 👇</li>
+      </ol>
+    </div>
+    <label>Link do calendário público</label>
+    <input type="text" id="calUrl" placeholder="webcal://... ou https://...ics">
+    <div class="modal-actions">
+      <button class="btn" onclick="closeCalConfig()">Cancelar</button>
+      <button class="btn primary" onclick="saveCalConfig()">Conectar</button>
+    </div>
+    <button class="modal-delete" id="calDisconnect" onclick="disconnectCal()" style="display:none">Desconectar calendário</button>
   </div>
 </div>
 
@@ -2487,9 +2535,9 @@ function renderCalendar(){
   const firstDay=new Date(calYear,calMonth,1).getDay(); // 0=domingo
   const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
   const hoje=new Date(); const hojeStr=`${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
-  // mapa de eventos por dia deste mês
+  // mapa de eventos por dia deste mês (manuais + balé do iPhone)
   const byDay={};
-  events.forEach(ev=>{
+  [...events, ...baleEvents].forEach(ev=>{
     const [y,m,d]=ev.date.split("-");
     if(+y===calYear && +m===calMonth+1){ (byDay[+d]=byDay[+d]||[]).push(ev); }
   });
@@ -2526,10 +2574,120 @@ function calPrev(){ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCal
 function calNext(){ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
 function calToday(){ const h=new Date(); calMonth=h.getMonth(); calYear=h.getFullYear(); renderCalendar(); }
 
+/* ---------- AGENDA DO BALÉ (calendário público do iPhone) ---------- */
+const CAL_URL_KEY='anaclara_bale_cal_url';
+let baleEvents=[]; // eventos lidos do calendário do iPhone
+
+function openCalConfig(){
+  const cur=localStorage.getItem(CAL_URL_KEY)||"";
+  document.getElementById('calUrl').value=cur;
+  document.getElementById('calDisconnect').style.display=cur?'block':'none';
+  document.getElementById('calConfigOverlay').classList.add('open');
+}
+function closeCalConfig(){ document.getElementById('calConfigOverlay').classList.remove('open'); }
+function saveCalConfig(){
+  const url=document.getElementById('calUrl').value.trim();
+  if(!url){ toast("Cole o link do calendário."); return; }
+  localStorage.setItem(CAL_URL_KEY, url);
+  closeCalConfig();
+  toast("Calendário conectado! Buscando eventos... 🩰");
+  loadBaleCalendar();
+}
+function disconnectCal(){
+  localStorage.removeItem(CAL_URL_KEY);
+  baleEvents=[];
+  closeCalConfig();
+  renderAgenda();
+  toast("Calendário desconectado.");
+}
+function openBaleAgenda(){
+  const url=localStorage.getItem(CAL_URL_KEY);
+  if(url){
+    // abre o calendário no app (webcal abre o Calendário no iPhone)
+    window.open(url.replace(/^https:\/\//i,'webcal://'),'_blank');
+  } else {
+    openCalConfig();
+  }
+}
+// lê o calendário público via função do Vercel (contorna o CORS)
+async function loadBaleCalendar(){
+  const url=localStorage.getItem(CAL_URL_KEY);
+  if(!url){ baleEvents=[]; return; }
+  try{
+    const resp=await fetch('/api/calendario?url='+encodeURIComponent(url));
+    if(!resp.ok) throw new Error('falha');
+    const texto=await resp.text();
+    baleEvents=parseICS(texto);
+    renderAgenda();
+  }catch(e){
+    // se a função não estiver disponível (ex: testando local), não quebra
+    const bar=document.getElementById('baleBar');
+    if(bar && localStorage.getItem(CAL_URL_KEY)){
+      renderBaleBar('erro');
+    }
+  }
+}
+// interpreta o texto do calendário (.ics) e extrai os eventos
+function parseICS(txt){
+  const evs=[];
+  // desdobra linhas quebradas (continuação começa com espaço)
+  txt=txt.replace(/\r\n[ \t]/g,'').replace(/\n[ \t]/g,'');
+  const blocks=txt.split('BEGIN:VEVENT').slice(1);
+  for(const b of blocks){
+    const get=(campo)=>{
+      const m=b.match(new RegExp(campo+'[^:\\n]*:(.*)'));
+      return m?m[1].trim():'';
+    };
+    let dt=get('DTSTART');
+    if(!dt) continue;
+    // extrai data YYYYMMDD (com ou sem hora)
+    const md=dt.match(/(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2}))?/);
+    if(!md) continue;
+    const date=`${md[1]}-${md[2]}-${md[3]}`;
+    const time=md[4]?`${md[4]}:${md[5]}`:'';
+    const title=unescapeICS(get('SUMMARY'))||'Compromisso';
+    const place=unescapeICS(get('LOCATION'));
+    const note=unescapeICS(get('DESCRIPTION'));
+    evs.push({id:'bale-'+date+'-'+title, date, time, title, place, note, done:false, fromBale:true});
+  }
+  return evs;
+}
+function unescapeICS(s){ return (s||'').replace(/\\n/g,' ').replace(/\\,/g,',').replace(/\\;/g,';').replace(/\\\\/g,'\\'); }
+
+function renderBaleBar(state){
+  const bar=document.getElementById('baleBar');
+  if(!bar) return;
+  const connected=!!localStorage.getItem(CAL_URL_KEY);
+  if(!connected){
+    bar.innerHTML=`
+      <div class="bale-connect">
+        <div class="bale-txt"><b>🩰 Agenda do balé</b><span>Conecte o calendário do iPhone dela e veja os ensaios e apresentações aqui.</span></div>
+        <button class="bale-btn primary" onclick="openCalConfig()">Conectar calendário</button>
+      </div>`;
+  } else if(state==='erro'){
+    bar.innerHTML=`
+      <div class="bale-connect">
+        <div class="bale-txt"><b>🩰 Agenda do balé</b><span>Conectada, mas não consegui ler agora. No site publicado (Vercel) funciona; em teste local pode não carregar.</span></div>
+        <button class="bale-btn" onclick="openBaleAgenda()">Abrir agenda</button>
+      </div>`;
+  } else {
+    const n=baleEvents.length;
+    bar.innerHTML=`
+      <div class="bale-connected">
+        <span class="bale-dot"></span>
+        <div class="bale-txt"><b>🩰 Agenda do balé conectada</b><span>${n} ${n===1?'evento':'eventos'} do iPhone aparecendo aqui.</span></div>
+        <button class="bale-btn" onclick="openBaleAgenda()">＋ Abrir no iPhone</button>
+      </div>`;
+  }
+}
+
 function renderAgenda(){
+  renderBaleBar(baleEvents.length?'ok':(localStorage.getItem(CAL_URL_KEY)?'ok':'none'));
   renderCalendar();
   const box=document.getElementById('agendaList');
-  if(!events.length){
+  // combina os eventos manuais com os do calendário do balé (iPhone)
+  const allEvents=[...events, ...baleEvents];
+  if(!allEvents.length){
     box.innerHTML=`<div class="empty"><div class="big">Nada marcado <em>ainda</em></div>
       Toque em <strong>＋ Novo compromisso</strong> para anotar ensaios, aulas e apresentações.</div>`;
     return;
@@ -2537,7 +2695,7 @@ function renderAgenda(){
   const meses=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
   const mesesAbrev=["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
   // ordena por data crescente (próximos primeiro)
-  const sorted=[...events].sort((a,b)=>(a.date>b.date?1:-1));
+  const sorted=[...allEvents].sort((a,b)=>(a.date>b.date?1:-1));
   // agrupa por mês/ano
   const groups={};
   for(const ev of sorted){
@@ -2553,18 +2711,18 @@ function renderAgenda(){
       const meta=[];
       if(ev.time) meta.push(`<span>${clockIcon()}${escapeHtml(ev.time)}</span>`);
       if(ev.place) meta.push(`<span>${pinIcon()}${escapeHtml(ev.place)}</span>`);
-      return `<div class="event${ev.done?' done':''}" data-date="${ev.date}">
-        <div class="e-check" data-toggle="${ev.id}">${checkIcon()}</div>
+      return `<div class="event${ev.done?' done':''}${ev.fromBale?' from-bale':''}" data-date="${ev.date}">
+        ${ev.fromBale?'<div class="e-bale-mark">🩰</div>':`<div class="e-check" data-toggle="${ev.id}">${checkIcon()}</div>`}
         <div class="e-cal"><div class="e-day">${day}</div><div class="e-mon">${mon}</div></div>
         <div class="e-body">
-          <div class="e-title">${escapeHtml(ev.title)}</div>
+          <div class="e-title">${escapeHtml(ev.title)}${ev.fromBale?'<span class="bale-tag">balé · iPhone</span>':''}</div>
           ${meta.length?`<div class="e-meta">${meta.join("")}</div>`:""}
           ${ev.note?`<div class="e-note">${escapeHtml(ev.note)}</div>`:""}
         </div>
         <div class="e-actions">
-          <button class="e-cal-btn" data-addcal="${ev.id}">＋ Agenda</button>
+          ${ev.fromBale?'':`<button class="e-cal-btn" data-addcal="${ev.id}">＋ Agenda</button>
           <button data-eevent="${ev.id}">Editar</button>
-          <button data-devent="${ev.id}">Remover</button>
+          <button data-devent="${ev.id}">Remover</button>`}
         </div></div>`;
     }).join("");
     return `<div class="agenda-group"><div class="agenda-month">${meses[+m-1]} de ${y}</div>${evs}</div>`;
@@ -2662,10 +2820,12 @@ function toast(msg){
     if(restored){ switchTab('inicio'); }
   }catch(e){}
   showRestoreBannerIfNeeded();
+  // carrega o calendário do balé (iPhone) se estiver conectado
+  try{ if(localStorage.getItem(CAL_URL_KEY)) loadBaleCalendar(); }catch(e){}
 })();
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    closeForm(); closeDiary(); closeEvent(); closeMarco(); closeSonho(); closeMenu();
+    closeForm(); closeDiary(); closeEvent(); closeMarco(); closeSonho(); closeCalConfig(); closeMenu();
     document.getElementById('lightbox').classList.remove('open');
   }
 });
