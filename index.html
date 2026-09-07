@@ -531,6 +531,12 @@
   .event .e-actions button{background:none;border:none;cursor:pointer;color:var(--faint);
     font-family:var(--sans);font-size:11px;font-weight:500;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
   .event .e-actions button:hover{color:var(--gold)}
+  .event .e-actions .e-cal-btn{color:var(--gold);font-weight:600}
+  .cal-menu{position:absolute;z-index:100;background:var(--paper-2);border:1px solid var(--line-strong);
+    border-radius:8px;box-shadow:0 20px 50px -20px rgba(0,0,0,.4);padding:6px;min-width:210px}
+  .cal-menu button{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
+    font-family:var(--sans);font-size:14px;color:var(--ink);padding:11px 14px;border-radius:5px;transition:background .12s ease}
+  .cal-menu button:hover{background:var(--gold-wash);color:var(--gold)}
   .event .e-check{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line-strong);
     cursor:pointer;flex-shrink:0;margin-top:4px;display:flex;align-items:center;justify-content:center;
     color:transparent;transition:all .15s ease}
@@ -2391,6 +2397,86 @@ function toggleEvent(id){
   ev.done=!ev.done;
   saveMeta(); renderAgenda();
 }
+
+/* ---------- EXPORTAR PARA AGENDA (Google / iPhone) ---------- */
+// converte data + hora do evento em formato de calendário (início e fim)
+function eventDateTimes(ev){
+  // hora pode vir como "19h", "19:00", "14h30", "" etc. — tenta extrair
+  let h=9, min=0; // padrão 9h se não houver hora
+  if(ev.time){
+    const t=ev.time.replace('h',':').replace(/[^\d:]/g,'');
+    const parts=t.split(':');
+    if(parts[0]!=='') h=Math.min(23,parseInt(parts[0],10)||9);
+    if(parts[1]!=='' && parts[1]!==undefined) min=Math.min(59,parseInt(parts[1],10)||0);
+  }
+  const [y,mo,d]=ev.date.split('-').map(Number);
+  const start=new Date(y,mo-1,d,h,min);
+  const end=new Date(start.getTime()+60*60*1000); // 1 hora de duração padrão
+  const fmt=(dt)=>dt.getFullYear()+pad2(dt.getMonth()+1)+pad2(dt.getDate())+'T'+pad2(dt.getHours())+pad2(dt.getMinutes())+'00';
+  return {start:fmt(start), end:fmt(end)};
+}
+function pad2(n){return String(n).padStart(2,'0');}
+// abre o Google Agenda com o evento pré-preenchido
+function addToGoogle(ev){
+  const {start,end}=eventDateTimes(ev);
+  const details=[ev.note||'', ev.place?('Local: '+ev.place):''].filter(Boolean).join('\n');
+  const url='https://calendar.google.com/calendar/render?action=TEMPLATE'
+    +'&text='+encodeURIComponent(ev.title||'Compromisso de dança')
+    +'&dates='+start+'/'+end
+    +(details?'&details='+encodeURIComponent(details):'')
+    +(ev.place?'&location='+encodeURIComponent(ev.place):'');
+  window.open(url,'_blank');
+}
+// baixa um arquivo .ics (funciona no iPhone, Google, Outlook)
+function addToICS(ev){
+  const {start,end}=eventDateTimes(ev);
+  const stamp=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const esc=(s)=>(s||'').replace(/[\\;,]/g,m=>'\\'+m).replace(/\n/g,'\\n');
+  const ics=[
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Ana Clara Danca//PT-BR',
+    'BEGIN:VEVENT',
+    'UID:'+ev.id+'@anaclara',
+    'DTSTAMP:'+stamp,
+    'DTSTART:'+start,
+    'DTEND:'+end,
+    'SUMMARY:'+esc(ev.title||'Compromisso de dança'),
+    ev.place?'LOCATION:'+esc(ev.place):'',
+    ev.note?'DESCRIPTION:'+esc(ev.note):'',
+    'BEGIN:VALARM','TRIGGER:-PT1H','ACTION:DISPLAY','DESCRIPTION:Lembrete','END:VALARM',
+    'END:VEVENT','END:VCALENDAR'
+  ].filter(Boolean).join('\r\n');
+  const blob=new Blob([ics],{type:'text/calendar'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(ev.title||'compromisso').replace(/[^\w]+/g,'-').toLowerCase()+'.ics';
+  a.click();
+  toast("Arquivo de calendário baixado 📅");
+}
+// menuzinho que aparece ao clicar em "＋ Agenda"
+function openCalMenu(id, btn){
+  const ev=events.find(x=>x.id===id); if(!ev) return;
+  closeCalMenu();
+  const menu=document.createElement('div');
+  menu.className='cal-menu';
+  menu.id='calMenu';
+  menu.innerHTML=`
+    <button onclick="addToGoogle(events.find(x=>x.id==='${id}'));closeCalMenu()">📅 Google Agenda</button>
+    <button onclick="addToICS(events.find(x=>x.id==='${id}'));closeCalMenu()">🍎 iPhone / Outlook (.ics)</button>`;
+  const r=btn.getBoundingClientRect();
+  document.body.appendChild(menu);
+  // posiciona sem deixar sair da tela pela direita
+  const menuW=220;
+  let left=r.left+window.scrollX;
+  if(left+menuW > window.scrollX+document.documentElement.clientWidth-10){
+    left = window.scrollX+document.documentElement.clientWidth-menuW-10;
+  }
+  menu.style.top=(r.bottom+window.scrollY+6)+'px';
+  menu.style.left=Math.max(10,left)+'px';
+  setTimeout(()=>document.addEventListener('click',closeCalMenu,{once:true}),0);
+}
+function closeCalMenu(){
+  const m=document.getElementById('calMenu'); if(m) m.remove();
+}
 let calMonth = new Date().getMonth();
 let calYear = new Date().getFullYear();
 function renderCalendar(){
@@ -2476,6 +2562,7 @@ function renderAgenda(){
           ${ev.note?`<div class="e-note">${escapeHtml(ev.note)}</div>`:""}
         </div>
         <div class="e-actions">
+          <button class="e-cal-btn" data-addcal="${ev.id}">＋ Agenda</button>
           <button data-eevent="${ev.id}">Editar</button>
           <button data-devent="${ev.id}">Remover</button>
         </div></div>`;
@@ -2485,6 +2572,7 @@ function renderAgenda(){
   box.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=()=>toggleEvent(b.dataset.toggle));
   box.querySelectorAll('[data-eevent]').forEach(b=>b.onclick=()=>editEvent(b.dataset.eevent));
   box.querySelectorAll('[data-devent]').forEach(b=>b.onclick=()=>deleteEvent(b.dataset.devent));
+  box.querySelectorAll('[data-addcal]').forEach(b=>b.onclick=(e)=>{e.stopPropagation();openCalMenu(b.dataset.addcal, b);});
   requestAnimationFrame(()=>box.querySelectorAll('.event').forEach((el,i)=>{el.style.animationDelay=(i*.04)+"s";el.classList.add('in');}));
 }
 function clockIcon(){return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg>`;}
