@@ -689,7 +689,7 @@
       <button class="btn primary" onclick="openDiary()">＋ Nota do diário</button>
     </div>
     <div class="tab-actions" id="actionsAgenda" style="display:none">
-      <button class="btn primary" onclick="openEvent()">＋ Evento de dança</button>
+      <button class="btn primary" onclick="novoEventoIphone()">＋ Evento de dança</button>
     </div>
     <div class="tab-actions" id="actionsSonhos" style="display:none">
       <button class="btn primary" onclick="openSonho()">✦ Adicionar sonho</button>
@@ -2608,6 +2608,34 @@ function openBaleAgenda(){
   } else {
     openCalConfig();
   }
+}
+// botão "+ Evento de dança": abre a agenda do iPhone/Mac para criar o evento lá
+function novoEventoIphone(){
+  // gera um evento em branco (.ics) que abre no Calendário do iPhone/Mac
+  const now=new Date();
+  const pad=(n)=>String(n).padStart(2,'0');
+  const h=Math.min(22,now.getHours()+1);
+  const dt=now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+'T'+pad(h)+'0000';
+  const dtEnd=now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+'T'+pad(h+1)+'0000';
+  const stamp=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const ics=[
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Ana Clara Danca//PT-BR','METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    'UID:novo-'+Date.now()+'@anaclara',
+    'DTSTAMP:'+stamp,
+    'DTSTART:'+dt,
+    'DTEND:'+dtEnd,
+    'SUMMARY:Novo evento de dança 🩰',
+    'DESCRIPTION:Ajuste a data\\, hora e o nome\\, e salve no calendário do Balé.',
+    'END:VEVENT','END:VCALENDAR'
+  ].join('\r\n');
+  const blob=new Blob([ics],{type:'text/calendar'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='novo-evento-danca.ics';
+  a.click();
+  const conectada=!!localStorage.getItem(CAL_URL_KEY);
+  toast(conectada?"Ajuste no Calendário e salve no Balé 🩰":"Ajuste e salve. Lembre de conectar a agenda no menu ⋯");
 }
 // lê o calendário público via função do Vercel (contorna o CORS)
 async function loadBaleCalendar(){
