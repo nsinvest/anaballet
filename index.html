@@ -334,6 +334,17 @@
     min-height:26px;white-space:pre-wrap}
   .perfil-value:empty::before{content:"— ainda não preenchido —";color:var(--faint);
     font-style:italic;font-size:16px}
+  /* lista de escolas */
+  .escolas-list{white-space:normal}
+  .escola-item{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:8px 0;border-bottom:1px solid var(--line)}
+  .escola-item:last-child{border-bottom:none}
+  .escola-info{display:flex;flex-direction:column;gap:1px}
+  .escola-nome{font-family:var(--serif);font-size:18px;color:var(--ink);line-height:1.3}
+  .escola-periodo{font-family:var(--sans);font-size:12px;color:var(--faint);letter-spacing:.02em}
+  .escola-del{background:none;border:none;color:var(--faint);cursor:pointer;font-size:14px;
+    padding:4px 6px;border-radius:6px;flex-shrink:0;transition:all .15s ease}
+  .escola-del:hover{color:#c0563a;background:rgba(192,86,58,.08)}
   .perfil-edit{position:absolute;top:20px;right:0;font-family:var(--sans);font-size:11px;
     letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:none;border:none;
     cursor:pointer;opacity:.7;transition:opacity .15s ease}
@@ -856,9 +867,9 @@
           <button class="perfil-edit" onclick="editProfile('inicio','Quando você começou a dançar?')">✎ editar</button>
         </div>
         <div class="perfil-field" data-field="escola">
-          <div class="perfil-label">Escola / Academia de dança</div>
-          <div class="perfil-value" id="pf-escola"></div>
-          <button class="perfil-edit" onclick="editProfile('escola','Onde você dança?')">✎ editar</button>
+          <div class="perfil-label">Escolas / Academias de dança</div>
+          <div class="perfil-value escolas-list" id="pf-escolas"></div>
+          <button class="perfil-edit" onclick="addEscola()">＋ adicionar</button>
         </div>
         <div class="perfil-field" data-field="estilo">
           <div class="perfil-label">Estilo preferido</div>
@@ -2335,10 +2346,47 @@ function renderProfile(){
       elIdade.textContent = p.idade || ""; // mantém idade antiga se ainda não migrou
     }
   }
-  ['inicio','escola','estilo','sonhos','sobre'].forEach(f=>{
+  ['inicio','estilo','sonhos','sobre'].forEach(f=>{
     const el=document.getElementById('pf-'+f);
     if(el) el.textContent = p[f]||"";
   });
+  renderEscolas();
+}
+// renderiza a lista de escolas (cada uma com nome e período opcional)
+function renderEscolas(){
+  const box=document.getElementById('pf-escolas');
+  if(!box) return;
+  const p=profile||{};
+  // migra a escola antiga (texto único) para a lista, se preciso
+  if(!p.escolas && p.escola){ p.escolas=[{nome:p.escola, periodo:''}]; delete p.escola; profile=p; }
+  const lista=p.escolas||[];
+  if(!lista.length){ box.innerHTML=''; return; }
+  box.innerHTML=lista.map((e,i)=>`
+    <div class="escola-item">
+      <div class="escola-info">
+        <span class="escola-nome">${escapeHtml(e.nome)}</span>
+        ${e.periodo?`<span class="escola-periodo">${escapeHtml(e.periodo)}</span>`:''}
+      </div>
+      <button class="escola-del" onclick="removeEscola(${i})" title="Remover">✕</button>
+    </div>`).join("");
+}
+function addEscola(){
+  const nome=prompt("Nome da escola / academia de dança:");
+  if(nome===null || !nome.trim()) return;
+  const periodo=prompt("Período (opcional) — ex.: 2018-2020, ou deixe em branco:","");
+  if(!profile) profile={};
+  if(!profile.escolas) profile.escolas=[];
+  profile.escolas.push({nome:nome.trim(), periodo:(periodo||'').trim()});
+  saveMeta();
+  renderEscolas();
+  toast("Escola adicionada 🩰");
+}
+function removeEscola(i){
+  if(!profile||!profile.escolas) return;
+  if(!confirm("Remover esta escola?")) return;
+  profile.escolas.splice(i,1);
+  saveMeta();
+  renderEscolas();
 }
 // calcula a idade em anos a partir de uma data "AAAA-MM-DD"
 function calcularIdade(nascimento){
