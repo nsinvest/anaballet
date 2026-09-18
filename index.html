@@ -146,8 +146,12 @@
   .cal-steps ol{margin:0;padding-left:20px;font-family:var(--sans);font-size:12.5px;color:var(--soft);line-height:1.7}
   .cal-steps b{color:var(--ink)}
   .calendar{border:1px solid var(--line-strong);border-radius:10px;padding:22px;background:var(--paper-2);margin-bottom:40px}
-  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px}
   .cal-title{font-family:var(--serif);font-size:22px;color:var(--ink);text-transform:capitalize}
+  .cal-selectors{display:flex;gap:8px}
+  .cal-select{font-family:var(--serif);font-size:18px;color:var(--ink);background:var(--paper);
+    border:1px solid var(--line-strong);border-radius:8px;padding:7px 12px;cursor:pointer}
+  .cal-select:focus{outline:none;border-color:var(--gold)}
   .cal-nav{display:flex;gap:8px}
   .cal-nav button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line-strong);
     background:var(--paper);color:var(--soft);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s ease}
@@ -158,8 +162,9 @@
   .cal-cell{min-height:56px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;
     position:relative;font-family:var(--sans);font-size:14px;color:var(--ink);cursor:default;transition:background .15s ease}
   .cal-cell.empty{cursor:default}
-  .cal-cell.has-event{cursor:pointer;font-weight:600}
-  .cal-cell.has-event:hover{background:var(--gold-wash)}
+  .cal-cell.clickable{cursor:pointer}
+  .cal-cell.clickable:hover{background:var(--gold-wash)}
+  .cal-cell.has-event{font-weight:600}
   .cal-cell.today{border:1.5px solid var(--gold)}
   .cal-cell.today .cal-num{color:var(--gold);font-weight:700}
   .cal-cell.selected{background:var(--gold);}
@@ -2936,13 +2941,22 @@ function renderCalendar(){
     const allDone=has && evs.every(e=>e.done);
     const isToday=dateStr===hojeStr;
     const isSel=dateStr===calSelectedDay;
-    const cls=['cal-cell', has?'has-event':'', allDone?'all-done':'', isToday?'today':'', isSel?'selected':''].filter(Boolean).join(' ');
-    cells+=`<div class="${cls}" ${has?`data-calday="${dateStr}"`:''}>
+    const cls=['cal-cell','clickable', has?'has-event':'', allDone?'all-done':'', isToday?'today':'', isSel?'selected':''].filter(Boolean).join(' ');
+    // TODOS os dias são clicáveis agora (não só os com evento)
+    cells+=`<div class="${cls}" data-calday="${dateStr}">
       <span class="cal-num">${day}</span>${has?'<span class="cal-dot"></span>':''}</div>`;
   }
+  // seletor de mês e ano
+  const mesOptions=meses.map((nome,i)=>`<option value="${i}" ${i===calMonth?'selected':''}>${nome.charAt(0).toUpperCase()+nome.slice(1)}</option>`).join("");
+  const anoBase=hoje.getFullYear();
+  let anoOptions="";
+  for(let a=anoBase-6; a<=anoBase+4; a++){ anoOptions+=`<option value="${a}" ${a===calYear?'selected':''}>${a}</option>`; }
   box.innerHTML=`
     <div class="cal-head">
-      <div class="cal-title">${meses[calMonth]} de ${calYear}</div>
+      <div class="cal-selectors">
+        <select class="cal-select" id="calMonthSel" onchange="calYear=calYear;calMonth=+this.value;renderCalendar();">${mesOptions}</select>
+        <select class="cal-select" id="calYearSel" onchange="calYear=+this.value;renderCalendar();">${anoOptions}</select>
+      </div>
       <div class="cal-nav">
         <button onclick="calPrev()" aria-label="Mês anterior">‹</button>
         <button onclick="calToday()" title="Hoje" aria-label="Voltar para hoje">•</button>
@@ -2950,7 +2964,7 @@ function renderCalendar(){
       </div>
     </div>
     <div class="cal-grid">${cells}</div>`;
-  // clicar num dia com evento mostra só as tarefas daquele dia
+  // clicar num dia mostra só as tarefas daquele dia (clicar de novo desmarca)
   box.querySelectorAll('[data-calday]').forEach(c=>c.onclick=()=>{
     calSelectedDay = (calSelectedDay===c.dataset.calday) ? null : c.dataset.calday;
     renderAgenda();
