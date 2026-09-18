@@ -845,10 +845,10 @@
         <span class="perfil-name">Ana Clara Giovanella</span>
       </div>
       <div class="perfil-info">
-        <div class="perfil-field" data-field="idade">
+        <div class="perfil-field" data-field="nascimento">
           <div class="perfil-label">Idade</div>
           <div class="perfil-value" id="pf-idade"></div>
-          <button class="perfil-edit" onclick="editProfile('idade','Quantos anos você tem?')">✎ editar</button>
+          <button class="perfil-edit" onclick="editNascimento()">✎ editar</button>
         </div>
         <div class="perfil-field" data-field="inicio">
           <div class="perfil-label">Quando começou a dançar</div>
@@ -2325,10 +2325,60 @@ function renderSonhos(){
 
 function renderProfile(){
   const p = profile||{};
-  ['idade','inicio','escola','estilo','sonhos','sobre'].forEach(f=>{
+  // idade é calculada a partir da data de nascimento
+  const elIdade=document.getElementById('pf-idade');
+  if(elIdade){
+    if(p.nascimento){
+      const idade=calcularIdade(p.nascimento);
+      elIdade.textContent = idade!==null ? `${idade} anos` : "";
+    } else {
+      elIdade.textContent = p.idade || ""; // mantém idade antiga se ainda não migrou
+    }
+  }
+  ['inicio','escola','estilo','sonhos','sobre'].forEach(f=>{
     const el=document.getElementById('pf-'+f);
     if(el) el.textContent = p[f]||"";
   });
+}
+// calcula a idade em anos a partir de uma data "AAAA-MM-DD"
+function calcularIdade(nascimento){
+  const [y,m,d]=nascimento.split('-').map(Number);
+  if(!y||!m||!d) return null;
+  const nasc=new Date(y,m-1,d);
+  const hoje=new Date();
+  let idade=hoje.getFullYear()-nasc.getFullYear();
+  const passouAniversario=(hoje.getMonth()>nasc.getMonth())||
+    (hoje.getMonth()===nasc.getMonth() && hoje.getDate()>=nasc.getDate());
+  if(!passouAniversario) idade--;
+  return idade>=0?idade:null;
+}
+// pede a data de nascimento (a idade é calculada sozinha depois)
+function editNascimento(){
+  const atual=(profile&&profile.nascimento)||"";
+  const val=prompt("Data de nascimento (dia/mês/ano, ex.: 15/03/2013):", formatarDataBR(atual));
+  if(val===null) return;
+  const iso=parseDataBR(val.trim());
+  if(!iso){ toast("Data inválida. Use dia/mês/ano, ex.: 15/03/2013"); return; }
+  if(!profile) profile={};
+  profile.nascimento=iso;
+  delete profile.idade; // remove a idade fixa antiga
+  saveMeta();
+  renderProfile();
+  toast("Data de nascimento salva 🩰");
+}
+// converte "AAAA-MM-DD" -> "DD/MM/AAAA" para mostrar no prompt
+function formatarDataBR(iso){
+  if(!iso) return "";
+  const [y,m,d]=iso.split('-');
+  return (d&&m&&y)?`${d}/${m}/${y}`:"";
+}
+// converte "DD/MM/AAAA" -> "AAAA-MM-DD"
+function parseDataBR(br){
+  const m=br.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m) return null;
+  const d=+m[1], mo=+m[2], y=+m[3];
+  if(d<1||d>31||mo<1||mo>12||y<1900||y>new Date().getFullYear()) return null;
+  return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
 function editProfile(field, promptText, isLong){
   const current = (profile&&profile[field])||"";
