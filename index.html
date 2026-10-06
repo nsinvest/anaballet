@@ -827,13 +827,13 @@
         <div class="autobk-row" id="autoBackupRow"></div>
         <div class="menu-label">Backup manual</div>
         <button onclick="exportBackup();closeMenu()">↓ Fazer backup agora</button>
-        <button onclick="document.getElementById('importInput').click();closeMenu()">↑ Restaurar backup</button>
+        <button onclick="triggerRestore()">↑ Restaurar backup</button>
         <div class="menu-label">Agenda do balé (iPhone)</div>
         <div class="cal-menu-row" id="calMenuRow"></div>
       </div>
     </div>
     <span class="counter" id="counter"></span>
-    <input type="file" id="importInput" accept="application/json" style="display:none" onchange="importBackup(event)">
+    <input type="file" id="importInput" accept=".json,application/json,text/plain,*/*" style="display:none" onchange="importBackup(event)">
   </div>
 </div>
 
@@ -845,7 +845,7 @@
       <span>Se você tem um backup salvo, restaure aqui para trazer todas as trajetórias de volta.</span>
     </div>
     <div class="restore-banner-actions">
-      <button class="restore-btn primary" onclick="document.getElementById('importInput').click()">↑ Restaurar backup</button>
+      <button class="restore-btn primary" onclick="triggerRestore()">↑ Restaurar backup</button>
       <button class="restore-btn" onclick="dismissRestoreBanner()">Começar do zero</button>
     </div>
   </div>
@@ -2029,19 +2029,42 @@ async function applyBackupData(data){
   await renderDashboard();
   if(typeof showRestoreBannerIfNeeded==='function') showRestoreBannerIfNeeded();
 }
+// abre o seletor de arquivo de forma confiável (inclusive no celular)
+function triggerRestore(){
+  closeMenu();
+  const input=document.getElementById('importInput');
+  // espera o menu fechar antes de abrir o seletor (evita bloqueio no celular)
+  setTimeout(()=>{ input.click(); }, 120);
+}
 async function importBackup(ev){
-  const file=ev.target.files[0]; if(!file) return;
+  const file=ev.target.files[0];
+  if(!file){ return; }
+  toast("Lendo o backup...");
   const r=new FileReader();
   r.onload=async()=>{
+    let data;
     try{
-      const data=JSON.parse(r.result);
-      if(!confirm("Restaurar este backup vai substituir tudo que está aqui. Continuar?")) return;
+      data=JSON.parse(r.result);
+    }catch(e){
+      toast("Esse arquivo não é um backup válido (.json).");
+      ev.target.value="";
+      return;
+    }
+    // confirma a restauração
+    if(!confirm("Restaurar este backup vai substituir tudo que está aqui. Continuar?")){
+      ev.target.value="";
+      return;
+    }
+    try{
       await applyBackupData(data);
       toast("Backup restaurado com sucesso 🤍");
-    }catch(e){ toast("Arquivo de backup inválido."); }
+    }catch(e){
+      toast("Não consegui restaurar o backup. Tente novamente.");
+    }
+    ev.target.value="";
   };
+  r.onerror=()=>{ toast("Não consegui ler o arquivo. Tente de novo."); ev.target.value=""; };
   r.readAsText(file);
-  ev.target.value="";
 }
 
 /* ---------- abas ---------- */
