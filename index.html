@@ -415,6 +415,11 @@
     border-bottom:1px solid var(--line-strong);}
   .navbar .wrap{display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding-top:15px;padding-bottom:15px}
   .tabs{display:inline-flex;gap:30px;margin-right:auto;align-items:baseline}
+  /* hambúrguer e nome da aba atual: só aparecem no celular */
+  .hamburger{display:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line-strong);
+    background:var(--paper);color:var(--ink);cursor:pointer;align-items:center;justify-content:center;flex-shrink:0}
+  .hamburger:hover{border-color:var(--gold);color:var(--gold)}
+  .nav-current{display:none;font-family:var(--serif);font-style:italic;font-size:22px;color:var(--ink);flex:1;min-width:0}
   .tab{font-family:var(--serif);font-size:19px;font-weight:400;border:none;background:none;color:var(--soft);
     padding:2px 0 8px;cursor:pointer;position:relative;letter-spacing:.01em;transition:color .25s ease}
   .tab::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--gold);
@@ -747,15 +752,26 @@
     .hero-photo::before{width:48px;height:48px;top:-12px;right:-6px}
     .hero-photo::after{width:48px;height:48px;bottom:-12px;left:-6px}
     .masthead{flex-wrap:wrap;gap:6px 16px;font-size:10px}
-    .navbar .wrap{gap:12px;padding-top:12px;padding-bottom:12px}
-    .tabs{order:1;margin-right:auto;gap:20px;overflow-x:auto;flex-wrap:nowrap;
-      -webkit-overflow-scrolling:touch;scrollbar-width:none;max-width:100%;padding-bottom:2px}
-    .tabs::-webkit-scrollbar{display:none}
-    .tab{font-size:17px;white-space:nowrap;flex-shrink:0}
-    .tab-actions{order:2}
-    .menu-wrap{order:3}
+    .navbar .wrap{gap:10px;padding-top:12px;padding-bottom:12px;flex-wrap:nowrap;align-items:center;position:relative}
+    /* mostra o hambúrguer e o nome da aba atual */
+    .hamburger{display:flex;order:0}
+    .nav-current{display:block;order:1}
+    /* as abas viram um painel dropdown (escondido até abrir pelo hambúrguer) */
+    .tabs{order:4;position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:stretch;
+      gap:0;background:var(--paper-2);border-bottom:1px solid var(--line-strong);
+      box-shadow:0 30px 60px -30px rgba(0,0,0,.35);padding:8px;margin:0;
+      max-height:0;overflow:hidden;opacity:0;pointer-events:none;transition:all .25s cubic-bezier(.2,.7,.2,1)}
+    .tabs.open{max-height:80vh;opacity:1;pointer-events:auto;padding:8px}
+    .tab{font-size:19px;white-space:nowrap;text-align:left;padding:14px 16px;border-radius:8px;width:100%}
+    .tab::after{display:none}
+    .tab.active{background:var(--gold-wash);color:var(--gold);font-style:normal;font-weight:600}
+    /* botões de ação ficam ao lado dos pontinhos */
+    .tab-actions{order:2;flex-shrink:0}
+    /* os três pontinhos ficam FIXOS no canto direito */
+    .menu-wrap{order:3;flex-shrink:0;margin-left:4px}
     .counter{display:none}
-    .menu{right:0;left:auto;transform:translateY(-6px)}
+    /* o menuzinho dos pontinhos abre ancorado à direita, pra nunca cortar */
+    .menu{right:0;left:auto;transform:translateY(-6px);max-width:calc(100vw - 32px)}
     .menu.open{transform:translateY(0)}
     .section-head h2{font-size:28px}
     main.wrap{padding:105px 22px 90px}
@@ -769,13 +785,17 @@
 <body>
 <div class="navbar">
   <div class="wrap">
-    <nav class="tabs">
-      <button class="tab active" data-tab="inicio" onclick="switchTab('inicio')">Início</button>
-      <button class="tab" data-tab="trajetoria" onclick="switchTab('trajetoria')">Trajetória</button>
-      <button class="tab" data-tab="diario" onclick="switchTab('diario')">Diário</button>
-      <button class="tab" data-tab="agenda" onclick="switchTab('agenda')">Agenda</button>
-      <button class="tab" data-tab="sonhos" onclick="switchTab('sonhos')">Sonhos</button>
-      <button class="tab" data-tab="perfil" onclick="switchTab('perfil')">Perfil</button>
+    <button class="hamburger" id="hamburger" onclick="toggleNavMenu(event)" aria-label="Menu">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
+    <span class="nav-current" id="navCurrent">Início</span>
+    <nav class="tabs" id="navTabs">
+      <button class="tab active" data-tab="inicio" onclick="switchTab('inicio');closeNavMenu()">Início</button>
+      <button class="tab" data-tab="trajetoria" onclick="switchTab('trajetoria');closeNavMenu()">Trajetória</button>
+      <button class="tab" data-tab="diario" onclick="switchTab('diario');closeNavMenu()">Diário</button>
+      <button class="tab" data-tab="agenda" onclick="switchTab('agenda');closeNavMenu()">Agenda</button>
+      <button class="tab" data-tab="sonhos" onclick="switchTab('sonhos');closeNavMenu()">Sonhos</button>
+      <button class="tab" data-tab="perfil" onclick="switchTab('perfil');closeNavMenu()">Perfil</button>
     </nav>
     <div class="tab-actions" id="actionsTrajetoria">
       <button class="btn primary" onclick="openForm()">＋ Adicionar momento</button>
@@ -2040,9 +2060,23 @@ function switchTab(tab){
   if(tab==='sonhos') renderSonhos();
   if(tab==='perfil') renderProfile();
   updateCounter(tab);
+  // atualiza o nome da aba atual (mostrado no celular ao lado do hambúrguer)
+  const nomes={inicio:'Início',trajetoria:'Trajetória',diario:'Diário',agenda:'Agenda',sonhos:'Sonhos',perfil:'Perfil'};
+  const nc=document.getElementById('navCurrent');
+  if(nc) nc.textContent=nomes[tab]||'';
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+// menu de navegação (hambúrguer) no celular
+function toggleNavMenu(e){
+  if(e) e.stopPropagation();
+  const t=document.getElementById('navTabs');
+  t.classList.toggle('open');
+}
+function closeNavMenu(){
+  const t=document.getElementById('navTabs');
+  if(t) t.classList.remove('open');
+}
 function updateCounter(tab){
   const c=document.getElementById('counter');
   if(tab==='trajetoria') c.textContent = entries.length?`${entries.length} ${entries.length===1?'momento':'momentos'}`:"";
@@ -3247,6 +3281,12 @@ async function updateStorageMeter(){
 document.addEventListener('click',e=>{
   const w=document.querySelector('.menu-wrap');
   if(w && !w.contains(e.target)) closeMenu();
+  // fecha o menu de navegação (hambúrguer) ao clicar fora dele
+  const nt=document.getElementById('navTabs');
+  const hb=document.getElementById('hamburger');
+  if(nt && nt.classList.contains('open') && !nt.contains(e.target) && hb && !hb.contains(e.target)){
+    closeNavMenu();
+  }
 });
 
 /* ---------- toast ---------- */
