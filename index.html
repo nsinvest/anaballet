@@ -1175,6 +1175,17 @@
   </div>
 </div>
 
+<div class="overlay" id="restoreConfirmOverlay">
+  <div class="modal" style="max-width:420px">
+    <h3>Restaurar backup?</h3>
+    <p class="hint">Isto vai substituir tudo que está na plataforma pelos dados do backup. Esta ação não pode ser desfeita.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="cancelRestore()">Cancelar</button>
+      <button class="btn primary" onclick="confirmRestore()">Sim, restaurar</button>
+    </div>
+  </div>
+</div>
+
 <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
   <button class="close" onclick="closeLightbox(event)">✕</button>
   <div id="lightboxContent"></div>
@@ -1801,11 +1812,15 @@ function blobToDataURL(blob){
   return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);});
 }
 function dataURLToBlob(dataURL){
+  if(!dataURL || typeof dataURL!=='string' || dataURL.indexOf(',')<0) return null;
   const [head,b64]=dataURL.split(",");
-  const mime=head.match(/:(.*?);/)[1];
-  const bin=atob(b64);const arr=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
-  return new Blob([arr],{type:mime});
+  const mimeMatch=head.match(/:(.*?);/);
+  const mime=mimeMatch?mimeMatch[1]:'image/jpeg';
+  try{
+    const bin=atob(b64);const arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+    return new Blob([arr],{type:mime});
+  }catch(e){ return null; }
 }
 // monta o objeto completo do backup (com as mídias em base64)
 async function buildBackupData(){
@@ -2007,27 +2022,37 @@ async function tryAutoRestore(){
 }
 // aplica os dados de um backup (usado pelo import manual e pela auto-restauração)
 async function applyBackupData(data){
-  // limpa mídias antigas
-  for(const e of entries) for(const m of (e.media||[])) if(m.mediaId) await idbDel(m.mediaId);
-  entries=data.entries||[];
-  diary=data.diary||[];
-  events=data.events||[];
-  profile=data.profile||{};
-  marcos=data.marcos||[];
-  sonhos=data.sonhos||[];
-  if(data.intro) document.getElementById('introText').textContent=data.intro;
-  // regrava mídias
-  if(data.media){
+  // limpa mídias antigas (não aborta se falhar)
+  try{
+    for(const e of entries) for(const m of (e.media||[])) if(m.mediaId){ try{ await idbDel(m.mediaId); }catch(_){} }
+  }catch(_){}
+  // restaura os dados de texto primeiro (o essencial)
+  entries=Array.isArray(data.entries)?data.entries:[];
+  diary=Array.isArray(data.diary)?data.diary:[];
+  events=Array.isArray(data.events)?data.events:[];
+  profile=(data.profile && typeof data.profile==='object')?data.profile:{};
+  marcos=Array.isArray(data.marcos)?data.marcos:[];
+  sonhos=Array.isArray(data.sonhos)?data.sonhos:[];
+  if(data.intro){ try{ document.getElementById('introText').textContent=data.intro; }catch(_){} }
+  // salva já o essencial, pra não perder os dados mesmo se as mídias falharem
+  try{ saveMeta(); }catch(_){}
+  // regrava as mídias uma a uma — se uma falhar, continua as outras
+  let falhasMedia=0;
+  if(data.media && typeof data.media==='object'){
     for(const [mediaId,dataURL] of Object.entries(data.media)){
-      await idbPut(mediaId, dataURLToBlob(dataURL));
+      try{
+        const blob=dataURLToBlob(dataURL);
+        if(blob) await idbPut(mediaId, blob);
+      }catch(e){ falhasMedia++; }
     }
   }
-  Object.keys(urlCache).forEach(k=>delete urlCache[k]);
-  saveMeta();
-  await render();
-  renderProfile();
-  await renderDashboard();
-  if(typeof showRestoreBannerIfNeeded==='function') showRestoreBannerIfNeeded();
+  try{ Object.keys(urlCache).forEach(k=>delete urlCache[k]); }catch(_){}
+  // redesenha a tela (cada parte protegida)
+  try{ await render(); }catch(_){}
+  try{ renderProfile(); }catch(_){}
+  try{ await renderDashboard(); }catch(_){}
+  try{ if(typeof showRestoreBannerIfNeeded==='function') showRestoreBannerIfNeeded(); }catch(_){}
+  return { falhasMedia };
 }
 // abre o seletor de arquivo de forma confiável (inclusive no celular)
 function triggerRestore(){
@@ -2040,31 +2065,54 @@ async function importBackup(ev){
   const file=ev.target.files[0];
   if(!file){ return; }
   toast("Lendo o backup...");
-  const r=new FileReader();
-  r.onload=async()=>{
-    let data;
-    try{
-      data=JSON.parse(r.result);
-    }catch(e){
-      toast("Esse arquivo não é um backup válido (.json).");
-      ev.target.value="";
-      return;
-    }
-    // confirma a restauração
-    if(!confirm("Restaurar este backup vai substituir tudo que está aqui. Continuar?")){
-      ev.target.value="";
-      return;
-    }
-    try{
-      await applyBackupData(data);
+  let texto="";
+  try{
+    // file.text() é mais confiável no Safari/iPhone que o FileReader com callback
+    if(file.text){ texto=await file.text(); }
+    else { texto=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error('leitura')); r.readAsText(file); }); }
+  }catch(e){
+    toast("Não consegui ler o arquivo. Tente de novo.");
+    ev.target.value=""; return;
+  }
+  let data;
+  try{
+    data=JSON.parse(texto);
+  }catch(e){
+    toast("Esse arquivo não é um backup válido (.json).");
+    ev.target.value=""; return;
+  }
+  // guarda o backup e mostra a confirmação na próxima interação (evita bloqueio do Safari)
+  pendingRestore=data;
+  ev.target.value="";
+  showRestoreConfirm();
+}
+let pendingRestore=null;
+// confirmação própria de restauração (o confirm() nativo falha no Safari dentro de callback)
+function showRestoreConfirm(){
+  const ov=document.getElementById('restoreConfirmOverlay');
+  if(ov) ov.classList.add('open');
+}
+function cancelRestore(){
+  pendingRestore=null;
+  const ov=document.getElementById('restoreConfirmOverlay');
+  if(ov) ov.classList.remove('open');
+}
+async function confirmRestore(){
+  const ov=document.getElementById('restoreConfirmOverlay');
+  if(ov) ov.classList.remove('open');
+  if(!pendingRestore){ toast("Nada para restaurar."); return; }
+  const data=pendingRestore; pendingRestore=null;
+  toast("Restaurando...");
+  try{
+    const res=await applyBackupData(data);
+    if(res && res.falhasMedia>0){
+      toast(`Backup restaurado 🤍 (${res.falhasMedia} foto(s) não carregaram)`);
+    } else {
       toast("Backup restaurado com sucesso 🤍");
-    }catch(e){
-      toast("Não consegui restaurar o backup. Tente novamente.");
     }
-    ev.target.value="";
-  };
-  r.onerror=()=>{ toast("Não consegui ler o arquivo. Tente de novo."); ev.target.value=""; };
-  r.readAsText(file);
+  }catch(e){
+    toast("Erro ao restaurar: "+(e.message||e));
+  }
 }
 
 /* ---------- abas ---------- */
@@ -3427,7 +3475,7 @@ function showInAppReminder(ev, quando){
 })();
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    closeForm(); closeDiary(); closeEvent(); closeMarco(); closeSonho(); closeCalConfig(); closeMenu();
+    closeForm(); closeDiary(); closeEvent(); closeMarco(); closeSonho(); closeCalConfig(); cancelRestore(); closeMenu();
     document.getElementById('lightbox').classList.remove('open');
   }
 });
