@@ -1825,21 +1825,31 @@ function dataURLToBlob(dataURL){
 // monta o objeto completo do backup (com as mídias em base64)
 async function buildBackupData(){
   const media={};
+  let esperadas=0, achadas=0, faltando=[];
   for(const e of entries){
     for(const m of (e.media||[])){
-      if(m.mediaId && !media[m.mediaId]){
-        const blob=await idbGet(m.mediaId);
-        if(blob) media[m.mediaId]=await blobToDataURL(blob);
+      // só fotos/vídeos locais têm mediaId; youtube não
+      if(m.mediaId && m.type!=='youtube' && !media[m.mediaId]){
+        esperadas++;
+        let blob=null;
+        try{ blob=await idbGet(m.mediaId); }catch(_){}
+        if(blob){ media[m.mediaId]=await blobToDataURL(blob); achadas++; }
+        else { faltando.push(m.mediaId); }
       }
     }
   }
   // inclui as fotos das páginas do diário
   for(const d of diary){
     if(d.mediaId && !media[d.mediaId]){
-      const blob=await idbGet(d.mediaId);
-      if(blob) media[d.mediaId]=await blobToDataURL(blob);
+      esperadas++;
+      let blob=null;
+      try{ blob=await idbGet(d.mediaId); }catch(_){}
+      if(blob){ media[d.mediaId]=await blobToDataURL(blob); achadas++; }
+      else { faltando.push(d.mediaId); }
     }
   }
+  // guarda o diagnóstico da última exportação
+  window.__ultimoBackupDiag={esperadas, achadas, faltando};
   return { intro:document.getElementById('introText').textContent, entries, diary, events, profile, marcos, sonhos, media };
 }
 async function exportBackup(){
@@ -1852,7 +1862,16 @@ async function exportBackup(){
   a.click();
   localStorage.setItem('anaclara_last_backup', new Date().toISOString());
   updateAutoBackupUI();
-  toast("Backup completo salvo! 🤍");
+  // avisa quantas fotos entraram no backup
+  const d=window.__ultimoBackupDiag||{esperadas:0,achadas:0};
+  const mb=(blob.size/1048576).toFixed(1);
+  if(d.esperadas>0 && d.achadas<d.esperadas){
+    toast(`Backup salvo (${mb} MB) — atenção: só ${d.achadas} de ${d.esperadas} fotos entraram!`);
+  } else if(d.esperadas>0){
+    toast(`Backup completo salvo! ${d.achadas} fotos incluídas (${mb} MB) 🤍`);
+  } else {
+    toast(`Backup salvo (${mb} MB) 🤍`);
+  }
 }
 
 /* ---------- BACKUP AUTOMÁTICO EM PASTA (Chrome/Edge) ---------- */
